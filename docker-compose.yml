@@ -1,0 +1,54 @@
+version: '2'
+
+services:
+  mysql:
+    image: mysql/mysql-server:5.7
+    volumes:
+      - ./docker/.data/mysql:/var/lib/mysql
+    ports:
+      - 3306:3306
+    networks:
+      - dockfony
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  app:
+      build:
+        context: ./docker/php7.1-fpm
+        args:
+          - WEBROOT_PATH=${WEBROOT_PATH}
+          - TIMEZONE=${TIMEZONE}
+          - XDEBUG_ENABLE=${XDEBUG_ENABLE}
+          - XDEBUG_PORT=${XDEBUG_PORT}
+          - XDEBUG_HOST=${XDEBUG_HOST}
+          - XDEBUG_KEY=${XDEBUG_KEY}
+      volumes:
+        - ${SYMFONY_PATH}:${WEBROOT_PATH}
+      networks:
+        - dockfony
+  nginx:
+    build:
+      context: ./docker/nginx
+      args:
+        - WEBROOT_PATH=${WEBROOT_PATH}
+        - SERVER_NAME=${SERVER_NAME}
+    ports:
+      - 80:80
+      - 443:443
+    volumes_from:
+      - app
+    volumes:
+      - ./docker/.logs/nginx:/var/log/nginx
+    networks:
+      - dockfony
+networks:
+  dockfony:
+    driver: bridge
+    ipam:
+        driver: default
+        config:
+          - subnet: ${NETWORK_SUBNET}
+            ip_range: ${NETWORK_IP_RANGE}
+            gateway: ${NETWORK_GATEWAY}
